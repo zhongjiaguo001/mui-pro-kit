@@ -1,0 +1,137 @@
+{
+  "name": "mui-pro-kit",
+  "version": "0.1.0",
+  "description": "Enterprise React UI component kit (DataGridPro, DatePicker, Message, NavMenu) built with MUI and TanStack Table.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhongjiaguo001/mui-pro-kit.git"
+  },
+  "homepage": "https://github.com/zhongjiaguo001/mui-pro-kit#readme",
+  "bugs": {
+    "url": "https://github.com/zhongjiaguo001/mui-pro-kit/issues"
+  },
+  "keywords": [
+    "mui",
+    "material-ui",
+    "react",
+    "ui",
+    "components",
+    "data-grid",
+    "date-picker",
+    "message",
+    "nav-menu",
+    "tanstack-table"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "*.css",
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
+    },
+    "./data-grid": {
+      "import": {
+        "types": "./dist/esm/components/DataGridPro/index.d.ts",
+        "default": "./dist/esm/components/DataGridPro/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/components/DataGridPro/index.d.cts",
+        "default": "./dist/cjs/components/DataGridPro/index.cjs"
+      }
+    },
+    "./date-picker": {
+      "import": {
+        "types": "./dist/esm/components/DatePicker/index.d.ts",
+        "default": "./dist/esm/components/DatePicker/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/components/DatePicker/index.d.cts",
+        "default": "./dist/cjs/components/DatePicker/index.cjs"
+      }
+    },
+    "./message": {
+      "import": {
+        "types": "./dist/esm/components/Message/index.d.ts",
+        "default": "./dist/esm/components/Message/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/components/Message/index.d.cts",
+        "default": "./dist/cjs/components/Message/index.cjs"
+      }
+    },
+    "./nav-menu": {
+      "import": {
+        "types": "./dist/esm/components/NavMenu/index.d.ts",
+        "default": "./dist/esm/components/NavMenu/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/components/NavMenu/index.d.cts",
+        "default": "./dist/cjs/components/NavMenu/index.cjs"
+      }
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "rslib build",
+    "build:demo": "vite build --outDir dist-demo",
+    "preview": "vite preview --outDir dist-demo",
+    "clean": "node -e \"import('fs').then(fs => { fs.rmSync('dist', { recursive: true, force: true }); fs.rmSync('dist-demo', { recursive: true, force: true }); })\"",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "peerDependencies": {
+    "@emotion/react": "^11.5.0",
+    "@emotion/styled": "^11.3.0",
+    "@mui/icons-material": "^7.0.0 || ^9.0.0",
+    "@mui/material": "^7.0.0 || ^9.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^9.3.1"
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@google/genai": "^2.4.0",
+    "@mui/icons-material": "^9.5.0",
+    "@mui/material": "^9.5.0",
+    "@rsbuild/plugin-react": "^2.1.1",
+    "@rslib/core": "^1.0.7",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.3",
+    "esbuild": "^0.25.0",
+    "express": "^4.21.2",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

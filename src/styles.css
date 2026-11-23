@@ -1,0 +1,328 @@
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.font-mono-tabular {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Official MUI X DataGrid CSS variable tokens */
+.MuiDataGrid-root {
+  --DataGrid-containerBackground: #ffffff;
+  --DataGrid-rowBorderColor: rgba(224, 224, 224, 1);
+  --DataGrid-cellOffsetMultiplier: 2;
+  --DataGrid-pinnedBackground: #ffffff;
+  --DataGrid-rowHoverBackground: rgba(0, 0, 0, 0.04);
+  --DataGrid-rowSelectedBackground: rgba(25, 118, 210, 0.08);
+  --DataGrid-rowSelectedHoverBackground: rgba(25, 118, 210, 0.12);
+  --DataGrid-focusOutlineColor: #1976d2;
+}
+
+/* Official MUI X DataGrid Pro pinned-column scroll shadow (.MuiDataGrid-scrollShadow) */
+.MuiDataGrid-scrollShadow {
+  --color: 0, 0, 0;
+  --opacity: 0.11;
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 12px;
+  pointer-events: none;
+  transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiDataGrid-scrollShadow--left {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--color), var(--opacity)) 0%,
+    rgba(var(--color), calc(var(--opacity) * 0.42)) 38%,
+    rgba(var(--color), 0) 100%
+  );
+}
+
+.MuiDataGrid-scrollShadow--right {
+  background: linear-gradient(
+    270deg,
+    rgba(var(--color), var(--opacity)) 0%,
+    rgba(var(--color), calc(var(--opacity) * 0.42)) 38%,
+    rgba(var(--color), 0) 100%
+  );
+}
+
+/* Subtle MUI-style scrollbars inside DataGrid virtual scroller */
+.datagrid-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.datagrid-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.datagrid-scroller::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.datagrid-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Official MUI X DataGrid Pro pinned rows vertical shadow dividers */
+.MuiDataGrid-pinnedRows--top {
+  box-shadow: 0 2px 5px -1px rgba(0, 0, 0, 0.12), 0 1px 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.MuiDataGrid-pinnedRows--bottom {
+  box-shadow: 0 -2px 5px -1px rgba(0, 0, 0, 0.12), 0 -1px 2px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* High-performance static styles for virtualized body rows & cells (zero Emotion runtime cost) */
+.MuiDataGrid-row {
+  position: relative;
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid var(--DataGrid-rowBorderColor, #e0e0e0);
+  box-sizing: border-box;
+  contain: style;
+}
+
+.MuiDataGrid-row:hover {
+  background-color: var(--row-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+}
+
+.MuiDataGrid-row:hover .MuiDataGrid-cell--pinned {
+  background-color: var(--row-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+}
+
+.MuiDataGrid-cell {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.MuiDataGrid-cell:not(.MuiDataGrid-cell--editing):focus,
+.MuiDataGrid-cell:not(.MuiDataGrid-cell--editing):focus-within {
+  outline: solid var(--DataGrid-focusOutlineColor, #1976d2) 1px;
+  outline-offset: -1px;
+}
+
+.MuiDataGrid-cell--editing-cell {
+  outline: 2px solid var(--DataGrid-focusOutlineColor, #1976d2);
+  outline-offset: -2px;
+  box-shadow: 0 1px 4px rgba(25, 118, 210, 0.16);
+}
+
+.MuiDataGrid-cell--editing-cell:has([data-edit-error="true"]) {
+  outline: 2px solid #d32f2f;
+  box-shadow: 0 1px 6px rgba(211, 47, 47, 0.28);
+}
+
+.MuiDataGrid-cell--editing-row {
+  background-color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(25, 118, 210, 0.22);
+}
+
+.MuiDataGrid-cell--editing-row:has([data-edit-error="true"]) {
+  outline: 2px solid #d32f2f;
+  outline-offset: -2px;
+  box-shadow: 0 1px 6px rgba(211, 47, 47, 0.28);
+}
+
+.MuiDataGrid-cell--editing-row:focus-within {
+  z-index: 3;
+  outline: 2px solid var(--DataGrid-focusOutlineColor, #1976d2);
+  outline-offset: -2px;
+  box-shadow: 0 1px 4px rgba(25, 118, 210, 0.16);
+}
+
+.MuiDataGrid-cell--editing-row:focus-within:has([data-edit-error="true"]) {
+  outline: 2px solid #d32f2f;
+  box-shadow: 0 1px 6px rgba(211, 47, 47, 0.28);
+}
+
+.MuiDataGrid-cellInner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.MuiDataGrid-actionsCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.MuiDataGrid-actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.54);
+  cursor: pointer;
+  transition: background-color 120ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiDataGrid-actionBtn:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: #1976d2;
+}
+
+.MuiDataGrid-actionBtn--primary {
+  color: #1976d2;
+}
+
+.MuiDataGrid-actionBtn--primary:hover:not(:disabled) {
+  color: #1565c0;
+}
+
+.MuiDataGrid-actionBtn--error:hover:not(:disabled) {
+  color: #d32f2f;
+}
+
+.MuiDataGrid-actionBtn:disabled {
+  color: rgba(0, 0, 0, 0.26);
+  cursor: default;
+}
+
+.MuiDataGrid-detailToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.54);
+  cursor: pointer;
+  transition: background-color 120ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiDataGrid-detailToggleBtn:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.MuiDataGrid-detailToggleBtn[aria-expanded="true"] {
+  color: #1976d2;
+}
+
+.MuiDataGrid-detailToggleIcon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiDataGrid-detailToggleBtn[aria-expanded="true"] .MuiDataGrid-detailToggleIcon {
+  transform: rotate(90deg);
+}
+
+.MuiDataGrid-checkboxWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.6);
+  transition: background-color 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.MuiDataGrid-checkboxWrap:hover {
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+.MuiDataGrid-checkboxWrap--disabled {
+  color: rgba(0, 0, 0, 0.22);
+  cursor: default;
+}
+
+.MuiDataGrid-checkboxWrap--disabled:hover {
+  background-color: transparent;
+}
+
+.MuiDataGrid-checkboxWrap--checked {
+  color: #1976d2;
+}
+
+.MuiDataGrid-checkboxInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.MuiDataGrid-checkboxSvg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.MuiDataGrid-dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: grab;
+}
+
+.MuiDataGrid-dragHandle:active {
+  cursor: grabbing;
+}
+
+.MuiDataGrid-dragHandle:hover {
+  color: #1976d2;
+  background-color: rgba(25, 118, 210, 0.06);
+}
+
+.MuiDataGrid-dragHandle--disabled {
+  color: rgba(0, 0, 0, 0.22);
+  cursor: not-allowed;
+}
+
+.MuiDataGrid-dragHandle--disabled:hover,
+.MuiDataGrid-dragHandle--disabled:active {
+  color: rgba(0, 0, 0, 0.22);
+  background-color: transparent;
+  cursor: not-allowed;
+}
+
+@media print {
+  .MuiDataGrid-toolbarWrapper,
+  .MuiDataGrid-footerContainer {
+    display: none !important;
+  }
+  .MuiDataGrid-root {
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+  }
+  .datagrid-scroller {
+    overflow: visible !important;
+  }
+  .MuiDataGrid-printSheet {
+    border: none !important;
+    padding: 0 !important;
+  }
+}

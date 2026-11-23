@@ -1,0 +1,6 @@
+{
+  "name": "MUI X DataGrid Pro (TanStack Table)",
+  "description": "参考 MUI X DataGrid Pro 源码架构，基于 TanStack Table v8 与 MUI 实现的企业级高级数据表格组件与交互演示。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

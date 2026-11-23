@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "./styles.css";
+
+@layer base {
+  html,
+  body {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #fafafa;
+    color: rgba(0, 0, 0, 0.87);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@media print {
+  header {
+    display: none !important;
+  }
+}

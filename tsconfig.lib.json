@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "rootDir": "./src",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "allowImportingTsExtensions": false,
+    "noEmit": false
+  },
+  "include": [
+    "src/index.ts",
+    "src/components/DataGridPro/**/*",
+    "src/components/DatePicker/**/*",
+    "src/components/Message/**/*",
+    "src/components/NavMenu/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "dist-demo",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}
