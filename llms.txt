@@ -13,17 +13,13 @@ When installed via npm, all documentation lives inside `node_modules/mui-pro-kit
 npm install mui-pro-kit @mui/material @mui/icons-material @emotion/react @emotion/styled react react-dom
 ```
 
-## Required Stylesheet
+## Styling & MUI Theme Integration (Zero Manual CSS Import)
 
-Import the static stylesheet once at the host application entry (e.g. `src/main.tsx` or `app/layout.tsx`):
+**No manual stylesheet import is required.**
 
-```ts
-import 'mui-pro-kit/styles.css';
-```
-
-- Contains zero-Emotion static CSS for `DataGridPro` virtualized rows/cells/checkboxes/scroll-shadows/print styles and `.font-mono-tabular` / `.tabular-nums` utilities.
-- Contains **no Tailwind** and **no global HTML/body resets**.
-- `Message`, `NavMenu`, and `DatePicker` inherit styling directly from MUI `<ThemeProvider>` / `sx` (only `DatePicker` optionally uses `.font-mono-tabular` for aligned numerals).
+- All components inherit styling from the host application's MUI `<ThemeProvider>` automatically.
+- `DataGridPro` and `DatePicker` inject their static hot-path CSS rules (`.MuiDataGrid-*`, `.font-mono-tabular`, `.tabular-nums`, `@media print`) once on mount via a module-level MUI `<GlobalStyles />` element, while mapping `--DataGrid-*` CSS custom properties from `useTheme()` in O(1) on `.MuiDataGrid-root` (preserving zero per-row/cell Emotion runtime cost).
+- `mui-pro-kit/styles.css` remains exported as an optional static stylesheet for backward compatibility, containing **no Tailwind** and **no global HTML/body resets**.
 
 ## Package Entry Points (`exports`)
 
@@ -34,7 +30,7 @@ import 'mui-pro-kit/styles.css';
 | `mui-pro-kit/date-picker` | `DatePicker` (with `DatePicker.RangePicker`), `RangePicker`, `CalendarPanel`, `dateCore` utilities |
 | `mui-pro-kit/message` | `message`, `useMessage`, `MessageGlobalHost`, `MessageContainer`, `MessageNotice`, `MessageStore` |
 | `mui-pro-kit/nav-menu` | `NavMenu`, `NAV_MENU_PALETTES`, `menuCore` utilities |
-| `mui-pro-kit/styles.css` | Static component stylesheet (required for `DataGridPro`) |
+| `mui-pro-kit/styles.css` | Optional standalone static CSS (auto-injected by components; manual import not required) |
 
 ## Detailed Component Documentation
 
@@ -51,7 +47,7 @@ Read the relevant document before generating non-trivial component code:
 
 ## Critical Cross-Component Rules
 
-1. **Always import `mui-pro-kit/styles.css` once** at the app entry whenever using `DataGridPro`.
+1. **Zero manual CSS needed**: Do not require users to import `mui-pro-kit/styles.css` unless they explicitly want a standalone CSS file—components auto-inject static styles via MUI `<GlobalStyles />` and sync with MUI `<ThemeProvider>`.
 2. **`DataGridPro` memoization & identity**: Every row must have a unique `id` (or pass `getRowId`). Always memoize `columns`, `dataSource`, `processRowUpdate`, `getActions`, and custom renderers with `useMemo` / `useCallback`.
 3. **`DataGridPro` editing**: `editable: true` alone does not persist changes—always provide `processRowUpdate` (or `dataSource.updateRow`).
 4. **`DataGridPro` cell performance**: Inside `renderCell`, use plain HTML (`<span>`, `<div>`) with inline styles or CSS classes rather than MUI `<Box sx>` / `<Tooltip>` when rendering large/virtualized tables.

@@ -9,7 +9,6 @@
 
 ### Import Path
 ```ts
-import 'mui-pro-kit/styles.css'; // Import once at app entry
 import {
   DataGridPro,
   GridActionsCellItem,
@@ -27,8 +26,8 @@ import {
 // Also re-exported from the root entry: 'mui-pro-kit'
 ```
 
-### Required Stylesheet
-The component relies on `.MuiDataGrid-*` static CSS rules and `--DataGrid-*` CSS custom properties shipped in `mui-pro-kit/styles.css` (imported once at application entry). These static rules power virtualized rows, cells, focus/edit outlines, checkboxes, detail toggles, action buttons, pinned scroll shadows, and print layout with zero Emotion runtime overhead.
+### Automatic Styling & MUI Theme Sync
+**No manual CSS import is required.** `DataGridPro` automatically injects its `.MuiDataGrid-*` static hot-path rules once via a module-level MUI `<GlobalStyles />` element (zero per-row/cell Emotion overhead) and derives `--DataGrid-*` CSS custom properties in O(1) from the host `<ThemeProvider>` via `useTheme()`. `mui-pro-kit/styles.css` remains available optionally if a standalone stylesheet is preferred.
 
 ### Peer Dependencies
 - `react`, `react-dom` (`^18.0.0 || ^19.0.0`)
@@ -64,7 +63,6 @@ Follow these rules strictly when generating code that consumes `DataGridPro`:
 
 ```tsx
 import { useMemo, useState } from 'react';
-import 'mui-pro-kit/styles.css';
 import { DataGridPro, type GridColDef } from 'mui-pro-kit/data-grid';
 
 interface OrderRow {

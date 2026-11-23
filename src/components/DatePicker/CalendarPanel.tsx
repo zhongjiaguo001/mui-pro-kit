@@ -13,6 +13,7 @@ import {
   isSameDay,
 } from './core/dateCore';
 import type { AntMuiCalendarProps } from './types';
+import { DATE_PICKER_TABULAR_STYLES } from './tabularStyles';
 
 const WEEKDAY_HEADERS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 const MONTH_NAMES = [
@@ -188,6 +189,7 @@ export const CalendarPanel: React.FC<AntMuiCalendarProps> = memo(
           },
         }}
       >
+        {DATE_PICKER_TABULAR_STYLES}
         {/* Calendar Header Controls */}
         <Box
           sx={{

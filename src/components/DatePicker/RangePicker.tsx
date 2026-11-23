@@ -16,6 +16,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { DatePanel, TimeColumnPanel } from './DatePanel';
+import { DATE_PICKER_TABULAR_STYLES } from './tabularStyles';
 import {
   addMonths,
   addYears,
@@ -443,6 +444,7 @@ export const RangePicker: React.FC<AntMuiRangePickerProps> = ({
         maxWidth: showTime ? 420 : 340,
       }}
     >
+      {DATE_PICKER_TABULAR_STYLES}
       {/* Dual Input Trigger Bar with Animated Active Indicator */}
       <Box
         role="group"

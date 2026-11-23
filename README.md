@@ -14,15 +14,7 @@ npm install mui-pro-kit @mui/material @mui/icons-material @emotion/react @emotio
 
 ## 使用方式
 
-### 1. 引入样式
-
-在应用入口引入一次组件样式（使用 `DataGridPro` 时必需；仅包含零 Emotion 运行时开销的 `.MuiDataGrid-*` 表格热路径样式与 `.font-mono-tabular` 等宽数字类，不含 Tailwind 或全局 reset）：
-
-```ts
-import 'mui-pro-kit/styles.css';
-```
-
-### 2. 引入组件
+**开箱即用，无需手动引入 CSS**：所有组件会自动联动宿主应用的 MUI `<ThemeProvider>`（暗黑模式、主色调、边框色等），`DataGridPro` 与 `DatePicker` 的静态热路径样式也会在首次挂载时通过 MUI `<GlobalStyles />` 一次性注入（零行/单元格级 Emotion 运行时开销）。
 
 支持统一入口或按组件子路径导入：
 
@@ -37,7 +29,9 @@ import { message, useMessage, MessageGlobalHost } from 'mui-pro-kit/message';
 import { NavMenu } from 'mui-pro-kit/nav-menu';
 ```
 
-> 提示：在 React 组件内推荐优先使用 `useMessage()`；若使用 `message.success(...)` 等静态调用，建议在应用 `<ThemeProvider>` 内部挂载 `<MessageGlobalHost />`，或通过 `message.config({ theme })` 注入主题。
+> 提示：
+> - 若仍有静态 CSS 文件按需加载需求，`mui-pro-kit/styles.css` 依然保留为可选导出，不再是必选项。
+> - 在 React 组件内推荐优先使用 `useMessage()`；若使用 `message.success(...)` 等静态调用，建议在应用 `<ThemeProvider>` 内部挂载 `<MessageGlobalHost />`，或通过 `message.config({ theme })` 注入主题。
 
 ## 组件文档
 

@@ -12,6 +12,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -123,6 +124,10 @@ import { GridAggregationFooterRow } from './components/GridAggregationFooterRow'
 import { GridTreeGroupRow } from './components/GridTreeGroupRow';
 import { GridFooter } from './components/GridFooter';
 import { GridEmptyOverlay, GridLoadingOverlay } from './components/GridOverlays';
+import {
+  DATA_GRID_STATIC_STYLES,
+  buildDataGridThemeVars,
+} from './gridStaticStyles';
 
 function attachRowDragGhost(
   e: React.DragEvent<HTMLElement>,
@@ -158,6 +163,8 @@ function attachRowDragGhost(
 export function DataGridPro<R extends GridValidRowModel>(
   props: DataGridProProps<R>,
 ) {
+  const theme = useTheme();
+  const gridThemeVars = useMemo(() => buildDataGridThemeVars(theme), [theme]);
   const {
     apiRef,
     rows,
@@ -2691,6 +2698,7 @@ export function DataGridPro<R extends GridValidRowModel>(
       data-server-tree={isServerTreeMode ? 'true' : 'false'}
       data-sidebar-open={activeSidebarPanel ? 'true' : 'false'}
       sx={{
+        ...gridThemeVars,
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
@@ -2700,9 +2708,10 @@ export function DataGridPro<R extends GridValidRowModel>(
         bgcolor: 'var(--DataGrid-containerBackground, #FFFFFF)',
         borderColor: 'var(--DataGrid-rowBorderColor, #E0E0E0)',
         fontSize: '0.875rem',
-        color: 'rgba(0, 0, 0, 0.87)',
+        color: theme.palette.text.primary,
       }}
     >
+      {DATA_GRID_STATIC_STYLES}
       {/* Slot: Toolbar */}
       {!disableToolbar &&
         (() => {

@@ -10,10 +10,7 @@ description: Build and integrate UI with the `mui-pro-kit` React component libra
 ## 1. Setup & Imports
 
 - **Peer dependencies** (installed in the host app, never bundled): `react`, `react-dom`, `@mui/material`, `@mui/icons-material`, `@emotion/react`, `@emotion/styled`.
-- **Stylesheet**: Import once at the host application entry whenever using `DataGridPro` (or tabular numeral styling):
-  ```ts
-  import 'mui-pro-kit/styles.css';
-  ```
+- **Zero manual CSS import**: Components automatically inject static hot-path styles via module-level MUI `<GlobalStyles />` and sync with the host MUI `<ThemeProvider>` (`useTheme()`). Importing `mui-pro-kit/styles.css` is optional and no longer required.
 - **Prefer subpath imports** for clearest intent and optimal tree-shaking:
   - `mui-pro-kit/data-grid`
   - `mui-pro-kit/date-picker`

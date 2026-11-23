@@ -16,6 +16,7 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import CancelIcon from '@mui/icons-material/Cancel';
 import CloseIcon from '@mui/icons-material/Close';
 import { DatePanel, TimeColumnPanel } from './DatePanel';
+import { DATE_PICKER_TABULAR_STYLES } from './tabularStyles';
 import {
   cloneDate,
   formatDateValue,
@@ -426,6 +427,7 @@ export const DatePicker: React.FC<AntMuiDatePickerProps> = ({
       style={style}
       sx={{ display: 'inline-flex', width: '100%', maxWidth: multiple ? 360 : 260 }}
     >
+      {DATE_PICKER_TABULAR_STYLES}
       {/* Input Trigger Shell */}
       <Box
         onMouseEnter={() => setHovered(true)}

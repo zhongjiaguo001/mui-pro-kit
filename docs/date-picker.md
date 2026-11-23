@@ -25,7 +25,7 @@ import {
 
 ### Theming & Styles
 - Automatically inherits Light/Dark mode, `palette.primary`, `palette.divider`, `palette.text`, and `shape.borderRadius` from the host app's MUI `<ThemeProvider>`.
-- Does **not** strictly require `mui-pro-kit/styles.css`, though importing it enables `.font-mono-tabular` for aligned monospace tabular numerals in calendar and time columns.
+- **No manual CSS import required** — `.font-mono-tabular` / `.tabular-nums` utility rules are automatically injected once via a static MUI `<GlobalStyles />` element.
 
 ---
 
