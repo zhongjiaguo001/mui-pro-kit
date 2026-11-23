@@ -29,7 +29,10 @@
     "**/*.css"
   ],
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "llms.txt",
+    "skills"
   ],
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.js",
@@ -85,7 +88,9 @@
         "default": "./dist/cjs/components/NavMenu/index.cjs"
       }
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./llms.txt": "./llms.txt",
+    "./docs/*": "./docs/*"
   },
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",

@@ -1,0 +1,60 @@
+# mui-pro-kit
+
+> Enterprise React UI component library (`DataGridPro`, `DatePicker`, `RangePicker`, `CalendarPanel`, `message`, `NavMenu`) built on Material UI (v7 / v9) and TanStack Table v9.
+
+This file is the primary index for AI coding assistants working in projects that consume `mui-pro-kit`.
+When installed via npm, all documentation lives inside `node_modules/mui-pro-kit/`.
+
+## Install & Peer Dependencies
+
+`mui-pro-kit` externalizes React, Material UI, and Emotion as `peerDependencies` so components share the host app's `<ThemeProvider>` and Emotion cache. `@tanstack/react-table` is bundled as a direct dependency.
+
+```bash
+npm install mui-pro-kit @mui/material @mui/icons-material @emotion/react @emotion/styled react react-dom
+```
+
+## Required Stylesheet
+
+Import the static stylesheet once at the host application entry (e.g. `src/main.tsx` or `app/layout.tsx`):
+
+```ts
+import 'mui-pro-kit/styles.css';
+```
+
+- Contains zero-Emotion static CSS for `DataGridPro` virtualized rows/cells/checkboxes/scroll-shadows/print styles and `.font-mono-tabular` / `.tabular-nums` utilities.
+- Contains **no Tailwind** and **no global HTML/body resets**.
+- `Message`, `NavMenu`, and `DatePicker` inherit styling directly from MUI `<ThemeProvider>` / `sx` (only `DatePicker` optionally uses `.font-mono-tabular` for aligned numerals).
+
+## Package Entry Points (`exports`)
+
+| Import Path | Contents |
+| --- | --- |
+| `mui-pro-kit` | All components, hooks, headless engines, and TypeScript types |
+| `mui-pro-kit/data-grid` | `DataGridPro`, `GridActionsCellItem`, `useGridApiRef`, locale packs, headless grid engines |
+| `mui-pro-kit/date-picker` | `DatePicker` (with `DatePicker.RangePicker`), `RangePicker`, `CalendarPanel`, `dateCore` utilities |
+| `mui-pro-kit/message` | `message`, `useMessage`, `MessageGlobalHost`, `MessageContainer`, `MessageNotice`, `MessageStore` |
+| `mui-pro-kit/nav-menu` | `NavMenu`, `NAV_MENU_PALETTES`, `menuCore` utilities |
+| `mui-pro-kit/styles.css` | Static component stylesheet (required for `DataGridPro`) |
+
+## Detailed Component Documentation
+
+Read the relevant document before generating non-trivial component code:
+
+- [DataGridPro Reference](./docs/data-grid.md): Full props, `GridColDef`, `apiRef`, editing/validation, clipboard/autofill, virtualization, server `dataSource` & lazy loading, tree data, row grouping, aggregation, pivot, charts, slots, i18n, CSS custom properties.
+- [DatePicker, RangePicker & CalendarPanel Reference](./docs/date-picker.md): Single/multiple/range pickers, `date`/`week`/`month`/`quarter`/`year` modes, `showTime`, `needConfirm`, `presets`, `disabledDate`/`disabledTime`, `cellRender`, MUI Light/Dark theming, `dateCore` utilities.
+- [Message Reference](./docs/message.md): `useMessage()` hook vs static `message.*`, `<MessageGlobalHost />`, `message.config({ theme })`, callable + `PromiseLike` handles, key-based in-place updates, `maxCount` FIFO eviction, `pauseOnHover`, scoped `getContainer`.
+- [NavMenu Reference](./docs/nav-menu.md): Declarative `items` tree (`item`/`submenu`/`group`/`divider`), `inline` (`inlineCollapsed`, `accordion`), `vertical`, `horizontal` (responsive overflow), `light`/`dark` themes, keyboard nav, `menuCore` utilities.
+
+## Agent Skill
+
+- [skills/mui-pro-kit/SKILL.md](./skills/mui-pro-kit/SKILL.md): Reusable Agent Skill summarizing strict invariants and workflows for AI assistants.
+
+## Critical Cross-Component Rules
+
+1. **Always import `mui-pro-kit/styles.css` once** at the app entry whenever using `DataGridPro`.
+2. **`DataGridPro` memoization & identity**: Every row must have a unique `id` (or pass `getRowId`). Always memoize `columns`, `dataSource`, `processRowUpdate`, `getActions`, and custom renderers with `useMemo` / `useCallback`.
+3. **`DataGridPro` editing**: `editable: true` alone does not persist changes—always provide `processRowUpdate` (or `dataSource.updateRow`).
+4. **`DataGridPro` cell performance**: Inside `renderCell`, use plain HTML (`<span>`, `<div>`) with inline styles or CSS classes rather than MUI `<Box sx>` / `<Tooltip>` when rendering large/virtualized tables.
+5. **`Message` theme inheritance**: Prefer `const [messageApi, contextHolder] = useMessage()` inside your MUI `<ThemeProvider>`. For imperative `message.success(...)`, mount `<MessageGlobalHost />` inside `<ThemeProvider>` (or pass `message.config({ theme })`).
+6. **`DatePicker` value types**: Values are native JavaScript `Date` objects (not Day.js / Moment objects). `DatePicker` supports `Date | Date[] | null`; `RangePicker` uses `[Date | null, Date | null] | null`.
+7. **`NavMenu` item keys**: Every leaf (`item`) and `submenu` must have a unique string `key`. `group` and `divider` keys are optional.
