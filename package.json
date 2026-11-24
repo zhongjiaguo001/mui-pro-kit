@@ -1,6 +1,6 @@
 {
   "name": "mui-pro-kit",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Enterprise React UI component kit (DataGridPro, DatePicker, Message, NavMenu) built with MUI and TanStack Table.",
   "license": "MIT",
   "repository": {
