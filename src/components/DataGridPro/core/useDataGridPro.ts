@@ -1675,16 +1675,29 @@ export function useDataGridPro<R extends GridValidRowModel>(
     [columns],
   );
 
-  const setQuickFilterText = useCallback((rawText: string) => {
-    const tokens = rawText
-      .split(/\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    setFilterModel((prev) => ({
-      ...prev,
-      quickFilterValues: tokens,
-    }));
-  }, []);
+  const setQuickFilterValues = useCallback(
+    (values: string[]) => {
+      const normalized = values
+        .map((s) => String(s).trim())
+        .filter(Boolean);
+      setFilterModel((prev) => ({
+        ...prev,
+        quickFilterValues: normalized,
+      }));
+    },
+    [setFilterModel],
+  );
+
+  const setQuickFilterText = useCallback(
+    (rawText: string) => {
+      const tokens = rawText
+        .split(/\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      setQuickFilterValues(tokens);
+    },
+    [setQuickFilterValues],
+  );
 
   const clearAllFilters = useCallback(() => {
     setFilterModel({
@@ -1692,7 +1705,7 @@ export function useDataGridPro<R extends GridValidRowModel>(
       logicOperator: 'and',
       quickFilterValues: [],
     });
-  }, []);
+  }, [setFilterModel]);
 
   const clearSelection = useCallback(() => {
     handleRowSelectionChange({});
@@ -2017,6 +2030,7 @@ export function useDataGridPro<R extends GridValidRowModel>(
     setHeaderFilterValue,
     setHeaderFilterOperator,
     setQuickFilterText,
+    setQuickFilterValues,
     clearAllFilters,
     clearSelection,
     getVisibleDataColDefs,

@@ -277,6 +277,9 @@ export function OrdersTable() {
 | `onSidebarPanelChange` | `(panel: GridSidebarPanel \| null) => void` | `undefined` | Sidebar tab change callback. |
 | `defaultSidebarPanel` | `'pivot' \| 'columns' \| 'filters' \| null` | `null` | Initial sidebar panel for uncontrolled usage. |
 | `chartsIntegration` | `boolean` | `true` | Enables toolbar "Charts" toggle with live bar/line/area/pie cross-filtering. |
+| `chartsPanelOpen` | `boolean` | `undefined` | Controlled open state for the right-docked Charts panel. |
+| `onChartsPanelOpenChange` | `(open: boolean) => void` | `undefined` | Callback when Charts panel open state changes. |
+| `defaultChartsPanelOpen` | `boolean` | `false` | Initial open state for Charts panel in uncontrolled mode. |
 | `rowSpanning` | `boolean` | `false` | Merges adjacent equal cell values vertically (opt-out per column via `rowSpan: false`). |
 | `listView` | `boolean` | `false` | Responsive single-column list/card mode. |
 | `listViewColumn` | `{ field: string; renderCell: (params: GridRenderCellParams<R>) => ReactNode }` | `undefined` | Card renderer used when `listView={true}`. |
@@ -287,7 +290,8 @@ export function OrdersTable() {
 | --- | --- | --- | --- |
 | `initialState` | `object` | `undefined` | Initial seed for `pagination`, `sorting`, `filter`, `columns` (`columnVisibilityModel`, `orderedFields`), `pinnedColumns`, `detailPanel`, `density`. |
 | `localeText` | `GridLocaleTextInput` | `GRID_ZH_CN_LOCALE_TEXT` | Deep-merged i18n dictionary (built-in: `GRID_ZH_CN_LOCALE_TEXT`, `GRID_EN_US_LOCALE_TEXT`). |
-| `disableToolbar` | `boolean` | `false` | Hides top toolbar completely. |
+| `showToolbar` | `boolean` | `!disableToolbar` | MUI X v8-aligned prop to show/hide the top toolbar. Set `showToolbar={false}` for clean externally-controlled tables; takes precedence over `disableToolbar`. |
+| `disableToolbar` | `boolean` | `false` | Legacy alias to hide top toolbar completely (prefer `showToolbar={false}`). |
 | `hideFooter` | `boolean` | `false` | Hides entire footer bar. |
 | `hideFooterPagination` | `boolean` | `false` | Hides pagination controls in footer. |
 | `hideFooterSelectedRowCount` | `boolean` | `false` | Hides selected row count indicator in footer. |
@@ -399,9 +403,21 @@ Initialize with `const apiRef = useGridApiRef<MyRow>();` and pass `<DataGridPro 
   - `setColumnVisibility(field, isVisible)` / `setColumnVisibilityModel(model)`
   - `setColumnWidth(field, width)` / `pinColumn(field, 'left' | 'right' | false)` / `autosizeColumns()`
 - **Query & Presentation Models**:
-  - `setFilterModel(model)` / `setSortModel(model)` / `getSortModel()`
+  - `setFilterModel(model)` / `setQuickFilterValues(values)` / `setSortModel(model)` / `getSortModel()`
   - `setPage(page)` / `setPageSize(pageSize)` / `setPaginationModel(model)`
   - `setDensity(density)` / `setRowGroupingModel(model)` / `setAggregationModel(model)`
+- **Panels & Preferences (Headless / External Control)**:
+  - `showFilterPanel(targetColumnField?, anchorEl?)` / `hideFilterPanel()` — anchors floating Popover to `anchorEl` (or built-in toolbar button), gracefully falling back to docked right Sidebar when toolbar is hidden.
+  - `showColumnsPanel(anchorEl?)` / `hideColumnsPanel()` — opens column management Popover or falls back to docked right Sidebar.
+  - `showPreferences(panel, anchorEl?)` / `hidePreferences()` — opens `'columns' | 'filters' | 'pivot'` preference panel.
+  - `setSidebarPanel(panel)` / `setChartsPanelOpen(open)` / `toggleChartsPanel()`
+- **Export & Print**:
+  - `exportDataAsCsv({ selectedOnly?, fileName? })`
+  - `exportDataAsExcel({ selectedOnly?, fileName?, sheetName? })`
+  - `exportDataAsJson({ selectedOnly?, fileName? })`
+  - `exportDataAsPrint()` — opens built-in print preview dialog.
+- **Edit History (Undo / Redo)**:
+  - `undo()` / `redo()` / `getEditHistoryState()` (`{ canUndo, canRedo, pastCount, futureCount }`)
 - **Scroll, Focus & Programmatic Edit**:
   - `scrollToIndexes({ rowIndex?, colIndex? })`
   - `setCellFocus(id, field)`
@@ -415,7 +431,7 @@ Initialize with `const apiRef = useGridApiRef<MyRow>();` and pass `<DataGridPro 
   - `publishEvent(event, params?)`
 
 ### Built-in `GridEventName` Values
-`sortModelChange` · `filterModelChange` · `paginationModelChange` · `rowSelectionChange` · `densityChange` · `columnVisibilityModelChange` · `cellEditStart` · `cellEditStop` · `rowsUpdate` · `cellClick` · `cellDoubleClick` · `rowDoubleClick` · `columnHeaderClick` · `columnOrderChange` · `columnWidthChange` · `cellModesModelChange` · `rowModesModelChange`
+`sortModelChange` · `filterModelChange` · `paginationModelChange` · `rowSelectionChange` · `densityChange` · `columnVisibilityModelChange` · `cellEditStart` · `cellEditStop` · `rowsUpdate` · `cellClick` · `cellDoubleClick` · `rowDoubleClick` · `columnHeaderClick` · `columnOrderChange` · `columnWidthChange` · `cellModesModelChange` · `rowModesModelChange` · `editHistoryChange` · `sidebarPanelChange` · `chartsPanelOpenChange`
 
 ---
 
@@ -423,7 +439,7 @@ Initialize with `const apiRef = useGridApiRef<MyRow>();` and pass `<DataGridPro 
 
 ### Slots
 Any slot accepts a React component, a `ReactNode`, or `null` (to suppress rendering):
-- `slots.toolbar` — receives `slotProps.toolbar` (`showQuickFilter`, `quickFilterPlaceholder`, `csvFileName`, `excelFileName`, etc.)
+- `slots.toolbar` — receives full `GridToolbarRenderProps` (`density`, `onDensityChange`, `quickFilterText`, `onQuickFilterChange`, `selectedCount`, `selectedIds`, `onClearSelection`, `onDeleteSelected`, `activeFilterCount`, `hiddenColumnCount`, `onOpenColumns`, `onOpenFilters`, `onExportCsv`, `onExportExcel`, `onExportJson`, `onPrint`, `canUndo`, `canRedo`, `onUndo`, `onRedo`, `onToggleChartsPanel`, `onToggleSidebar`, `localeText`, etc.) merged with `slotProps.toolbar`.
 - `slots.footer` — replaces entire footer; receives `{ totalFilteredRows, selectedCount, ...slotProps.footer }`
 - `slots.pagination` — replaces only the pagination section inside footer
 - `slots.noRowsOverlay` / `slots.noResultsOverlay` / `slots.loadingOverlay`
@@ -577,6 +593,35 @@ const loadView = () => {
   const raw = localStorage.getItem('orders_grid_view');
   if (raw) apiRef.current?.restoreState(JSON.parse(raw));
 };
+```
+
+### Recipe G: Headless / External Toolbar Control (`showToolbar={false}`)
+```tsx
+const apiRef = useGridApiRef<OrderRow>();
+const [sidebarPanel, setSidebarPanel] = useState<GridSidebarPanel | null>(null);
+
+<>
+  <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}>
+    <TextField
+      size="small"
+      placeholder="Search..."
+      onChange={(e) => apiRef.current?.setQuickFilterValues(parseQuickFilterInput(e.target.value))}
+    />
+    <Button onClick={(e) => apiRef.current?.showFilterPanel(undefined, e.currentTarget)}>Filters</Button>
+    <Button onClick={(e) => apiRef.current?.showColumnsPanel(e.currentTarget)}>Columns</Button>
+    <Button onClick={() => apiRef.current?.exportDataAsExcel({ fileName: 'orders' })}>Excel</Button>
+    <Button onClick={() => apiRef.current?.exportDataAsPrint()}>Print</Button>
+  </Stack>
+
+  <DataGridPro
+    apiRef={apiRef}
+    rows={rows}
+    columns={columns}
+    showToolbar={false}
+    sidebarPanel={sidebarPanel}
+    onSidebarPanelChange={setSidebarPanel}
+  />
+</>
 ```
 
 ---

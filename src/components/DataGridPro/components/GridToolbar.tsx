@@ -38,7 +38,7 @@ import {
   type GridLocaleText,
 } from '../core/localeText';
 
-interface GridToolbarProps {
+export interface GridToolbarProps {
   columnsButtonRef: React.RefObject<HTMLButtonElement | null>;
   filterButtonRef: React.RefObject<HTMLButtonElement | null>;
   onOpenColumns: (el: HTMLElement) => void;

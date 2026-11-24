@@ -1,5 +1,6 @@
 export { DataGridPro } from './DataGridPro';
 export { GridActionsCellItem } from './components/GridActionsCellItem';
+export { GridToolbar, type GridToolbarProps } from './components/GridToolbar';
 export { useGridApiRef } from './core/useGridApiRef';
 export {
   GRID_CHECKBOX_SELECTION_FIELD,
@@ -103,8 +104,13 @@ export {
   createGridEventBus,
   applyRowUpdates,
   renderGridSlot,
+  resolveToolbarVisibility,
+  resolvePanelOpenTarget,
+  normalizeExportOptions,
+  parseQuickFilterInput,
   type GridEventBus,
   type GridEventListener,
+  type GridPanelOpenTarget,
 } from './core/gridApiHelpers';
 export {
   DEFAULT_SORTING_ORDER,
@@ -124,7 +130,11 @@ export {
   mergeLazyRowsIntoMap,
   type LazyChunkRange,
 } from './core/lazyViewportEngine';
-export { GridCellModes, GridRowModes } from './types';
+export {
+  GridCellModes,
+  GridRowModes,
+  GridPreferencePanelsValue,
+} from './types';
 export type {
   DataGridProProps,
   GridActionsCellItemProps,
@@ -157,8 +167,10 @@ export type {
   GridEditCellProps,
   GridEditHistoryBatch,
   GridEditHistoryChange,
+  GridEditHistorySummary,
   GridEditMode,
   GridEventName,
+  GridExportOptions,
   GridFeatureMode,
   GridFilterInputValueProps,
   GridFilterItem,
@@ -180,6 +192,7 @@ export type {
   GridPivotModel,
   GridPivotValueField,
   GridPreProcessEditCellPropsParams,
+  GridPreferencePanelsValueType,
   GridProcessCellPasteParams,
   GridRenderCellParams,
   GridRenderEditCellParams,
@@ -207,6 +220,7 @@ export type {
   GridSortItem,
   GridSortModel,
   GridStateSnapshot,
+  GridToolbarRenderProps,
   GridToolbarSlotProps,
   GridUpdateRowParams,
   GridValidRowModel,

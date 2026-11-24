@@ -1,6 +1,12 @@
 import React, { isValidElement } from 'react';
 import type { ComponentType, ReactNode } from 'react';
-import type { GridRowId, GridRowUpdate, GridValidRowModel } from '../types';
+import type {
+  GridExportOptions,
+  GridRowId,
+  GridRowUpdate,
+  GridSidebarPanel,
+  GridValidRowModel,
+} from '../types';
 
 export type GridEventListener<P = unknown> = (params: P) => void;
 
@@ -175,4 +181,67 @@ export function renderGridSlot<
   }
 
   return slot as ReactNode;
+}
+
+/**
+ * Resolves whether the top toolbar slot should be rendered.
+ * Aligns with MUI X v8 `showToolbar` while staying backward-compatible with `disableToolbar`.
+ */
+export function resolveToolbarVisibility(options: {
+  showToolbar?: boolean;
+  disableToolbar?: boolean;
+}): boolean {
+  if (typeof options.showToolbar === 'boolean') {
+    return options.showToolbar;
+  }
+  return !options.disableToolbar;
+}
+
+export type GridPanelOpenTarget =
+  | { mode: 'popover'; anchorEl: HTMLElement }
+  | { mode: 'sidebar'; panel: GridSidebarPanel };
+
+/**
+ * Determines how a column/filter preference panel opens:
+ * 1. Explicit `anchorEl` (e.g. external toolbar button) -> anchored floating Popover
+ * 2. Mounted built-in toolbar button ref -> anchored floating Popover
+ * 3. Neither available (headless / `showToolbar={false}`) -> graceful fallback to docked right Sidebar
+ */
+export function resolvePanelOpenTarget(params: {
+  panel: GridSidebarPanel;
+  anchorEl?: HTMLElement | null;
+  toolbarButtonEl?: HTMLElement | null;
+}): GridPanelOpenTarget {
+  if (params.panel === 'pivot') {
+    return { mode: 'sidebar', panel: 'pivot' };
+  }
+  if (params.anchorEl) {
+    return { mode: 'popover', anchorEl: params.anchorEl };
+  }
+  if (params.toolbarButtonEl) {
+    return { mode: 'popover', anchorEl: params.toolbarButtonEl };
+  }
+  return { mode: 'sidebar', panel: params.panel };
+}
+
+/**
+ * Normalizes both legacy boolean `selectedOnly` arguments and MUI X style option objects.
+ */
+export function normalizeExportOptions(
+  input?: boolean | GridExportOptions,
+): GridExportOptions {
+  if (typeof input === 'boolean') {
+    return { selectedOnly: input };
+  }
+  return input ?? {};
+}
+
+/**
+ * Splits a free-text quick filter query into trimmed non-empty search tokens.
+ */
+export function parseQuickFilterInput(rawText: string): string[] {
+  return rawText
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
 }

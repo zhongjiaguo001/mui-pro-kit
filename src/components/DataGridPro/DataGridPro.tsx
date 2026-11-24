@@ -27,10 +27,12 @@ import {
   type GridChartModel,
   type GridColDef,
   type GridEditHistoryChange,
+  type GridExportOptions,
   type GridPivotModel,
   type GridRowId,
   type GridRowModesModel,
   type GridSidebarPanel,
+  type GridToolbarRenderProps,
   type GridValidRowModel,
 } from './types';
 import {
@@ -83,7 +85,10 @@ import { resolveLocaleText } from './core/localeText';
 import {
   applyRowUpdates,
   createGridEventBus,
+  normalizeExportOptions,
   renderGridSlot,
+  resolvePanelOpenTarget,
+  resolveToolbarVisibility,
 } from './core/gridApiHelpers';
 import {
   computeAutoPageSize,
@@ -236,6 +241,9 @@ export function DataGridPro<R extends GridValidRowModel>(
     onSidebarPanelChange,
     defaultSidebarPanel = null,
     chartsIntegration = true,
+    chartsPanelOpen: controlledChartsPanelOpen,
+    onChartsPanelOpenChange,
+    defaultChartsPanelOpen = false,
     rowSpanning = false,
     virtualizeThreshold = 40,
     onRowsScrollEnd,
@@ -262,10 +270,16 @@ export function DataGridPro<R extends GridValidRowModel>(
     hideFooterSelectedRowCount = false,
     slots,
     slotProps,
+    showToolbar,
     disableToolbar = false,
     emptyStateAction,
     ariaLabel = '企业级数据表格',
   } = props;
+
+  const effectiveShowToolbar = resolveToolbarVisibility({
+    showToolbar,
+    disableToolbar,
+  });
 
   const localeText = useMemo(
     () => resolveLocaleText(localeTextInput),
@@ -306,6 +320,8 @@ export function DataGridPro<R extends GridValidRowModel>(
     controlledSidebarPanel !== undefined
       ? controlledSidebarPanel
       : internalSidebarPanel;
+  const activeSidebarPanelRef = useRef(activeSidebarPanel);
+  activeSidebarPanelRef.current = activeSidebarPanel;
   const setActiveSidebarPanel = useCallback(
     (next: GridSidebarPanel | null) => {
       if (controlledSidebarPanel === undefined) {
@@ -315,7 +331,28 @@ export function DataGridPro<R extends GridValidRowModel>(
     },
     [controlledSidebarPanel, onSidebarPanelChange],
   );
-  const [chartsPanelOpen, setChartsPanelOpen] = useState(false);
+  const [internalChartsPanelOpen, setInternalChartsPanelOpen] = useState(
+    defaultChartsPanelOpen,
+  );
+  const chartsPanelOpen =
+    controlledChartsPanelOpen !== undefined
+      ? controlledChartsPanelOpen
+      : internalChartsPanelOpen;
+  const chartsPanelOpenRef = useRef(chartsPanelOpen);
+  chartsPanelOpenRef.current = chartsPanelOpen;
+  const setChartsPanelOpen = useCallback(
+    (updater: boolean | ((prev: boolean) => boolean)) => {
+      const next =
+        typeof updater === 'function'
+          ? updater(chartsPanelOpenRef.current)
+          : updater;
+      if (controlledChartsPanelOpen === undefined) {
+        setInternalChartsPanelOpen(next);
+      }
+      onChartsPanelOpenChange?.(next);
+    },
+    [controlledChartsPanelOpen, onChartsPanelOpenChange],
+  );
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
 
   const [chartModel, setChartModel] = useState<GridChartModel>(() => {
@@ -701,6 +738,7 @@ export function DataGridPro<R extends GridValidRowModel>(
     setHeaderFilterValue,
     setHeaderFilterOperator,
     setQuickFilterText,
+    setQuickFilterValues,
     clearAllFilters,
     clearSelection,
     getVisibleDataColDefs,
@@ -1003,6 +1041,26 @@ export function DataGridPro<R extends GridValidRowModel>(
   const [quickInput, setQuickInput] = useState(() =>
     (filterModel.quickFilterValues ?? []).join(' '),
   );
+  const quickFilterValuesSig = (filterModel.quickFilterValues ?? []).join(' ');
+  useEffect(() => {
+    setQuickInput((prev) => {
+      const prevNormalized = prev
+        .split(/\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .join(' ');
+      return prevNormalized === quickFilterValuesSig
+        ? prev
+        : quickFilterValuesSig;
+    });
+  }, [quickFilterValuesSig]);
+
+  useEffect(() => {
+    if (!effectiveShowToolbar) {
+      setColumnsAnchor((prev) => (prev && !prev.isConnected ? null : prev));
+      setFilterAnchor((prev) => (prev && !prev.isConnected ? null : prev));
+    }
+  }, [effectiveShowToolbar]);
 
   // Official MUI X live column drag-reorder state + swap cooldown to prevent width-mismatch jitter
   const [draggedField, setDraggedField] = useState<string | null>(null);
@@ -1259,7 +1317,8 @@ export function DataGridPro<R extends GridValidRowModel>(
   }, [clearAllFilters]);
 
   const handleExportCsv = useCallback(
-    (selectedOnly: boolean) => {
+    (options?: boolean | GridExportOptions) => {
+      const { selectedOnly = false, fileName } = normalizeExportOptions(options);
       const exportRows = selectedOnly
         ? table.getSelectedRowModel().rows.map((r) => r.original)
         : table.getPrePaginatedRowModel().rows.map((r) => r.original);
@@ -1271,7 +1330,7 @@ export function DataGridPro<R extends GridValidRowModel>(
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${slotProps?.toolbar?.csvFileName ?? 'datagrid-export'}.csv`;
+      anchor.download = `${fileName ?? slotProps?.toolbar?.csvFileName ?? 'datagrid-export'}.csv`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -1282,12 +1341,17 @@ export function DataGridPro<R extends GridValidRowModel>(
   );
 
   const handleExportXlsx = useCallback(
-    (selectedOnly: boolean) => {
+    (options?: boolean | GridExportOptions) => {
+      const {
+        selectedOnly = false,
+        fileName,
+        sheetName = '订单台账',
+      } = normalizeExportOptions(options);
       const exportRows = selectedOnly
         ? table.getSelectedRowModel().rows.map((r) => r.original)
         : table.getPrePaginatedRowModel().rows.map((r) => r.original);
       const visibleCols = getVisibleDataColDefs();
-      const bytes = serializeRowsToXlsxBytes(exportRows, visibleCols, '订单台账', {
+      const bytes = serializeRowsToXlsxBytes(exportRows, visibleCols, sheetName, {
         columnGroupingModel: effectiveHookProps.columnGroupingModel,
         rowSpanning: props.rowSpanning && !pivotMode,
       });
@@ -1298,6 +1362,7 @@ export function DataGridPro<R extends GridValidRowModel>(
       const anchor = document.createElement('a');
       anchor.href = url;
       const baseName =
+        fileName ??
         slotProps?.toolbar?.excelFileName ??
         slotProps?.toolbar?.csvFileName ??
         'datagrid-export';
@@ -1321,7 +1386,8 @@ export function DataGridPro<R extends GridValidRowModel>(
   );
 
   const handleExportJson = useCallback(
-    (selectedOnly: boolean) => {
+    (options?: boolean | GridExportOptions) => {
+      const { selectedOnly = false, fileName } = normalizeExportOptions(options);
       const exportRows = selectedOnly
         ? table.getSelectedRowModel().rows.map((r) => r.original)
         : table.getPrePaginatedRowModel().rows.map((r) => r.original);
@@ -1333,7 +1399,7 @@ export function DataGridPro<R extends GridValidRowModel>(
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${slotProps?.toolbar?.csvFileName ?? 'datagrid-export'}.json`;
+      anchor.download = `${fileName ?? slotProps?.toolbar?.csvFileName ?? 'datagrid-export'}.json`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -1354,14 +1420,95 @@ export function DataGridPro<R extends GridValidRowModel>(
     setColumnMenuState({ anchorEl: null, field: null });
   }, []);
 
-  const handleFilterFromMenu = useCallback(
-    (field: string) => {
-      addFilterForColumn(field);
-      if (filterButtonRef.current) {
-        setFilterAnchor(filterButtonRef.current);
+  const handleShowColumnsPanel = useCallback(
+    (anchorEl?: HTMLElement | null) => {
+      const target = resolvePanelOpenTarget({
+        panel: 'columns',
+        anchorEl,
+        toolbarButtonEl: columnsButtonRef.current,
+      });
+      if (target.mode === 'popover') {
+        setFilterAnchor(null);
+        setColumnsAnchor(target.anchorEl);
+      } else {
+        setColumnsAnchor(null);
+        setFilterAnchor(null);
+        setChartsPanelOpen(false);
+        setActiveSidebarPanel('columns');
       }
     },
-    [addFilterForColumn],
+    [setActiveSidebarPanel, setChartsPanelOpen],
+  );
+
+  const handleHideColumnsPanel = useCallback(() => {
+    setColumnsAnchor(null);
+    if (activeSidebarPanelRef.current === 'columns') {
+      setActiveSidebarPanel(null);
+    }
+  }, [setActiveSidebarPanel]);
+
+  const handleShowFilterPanel = useCallback(
+    (targetColumnField?: string, anchorEl?: HTMLElement | null) => {
+      if (targetColumnField) {
+        addFilterForColumn(targetColumnField);
+      }
+      const target = resolvePanelOpenTarget({
+        panel: 'filters',
+        anchorEl,
+        toolbarButtonEl: filterButtonRef.current,
+      });
+      if (target.mode === 'popover') {
+        setColumnsAnchor(null);
+        setFilterAnchor(target.anchorEl);
+      } else {
+        setColumnsAnchor(null);
+        setFilterAnchor(null);
+        setChartsPanelOpen(false);
+        setActiveSidebarPanel('filters');
+      }
+    },
+    [addFilterForColumn, setActiveSidebarPanel, setChartsPanelOpen],
+  );
+
+  const handleHideFilterPanel = useCallback(() => {
+    setFilterAnchor(null);
+    if (activeSidebarPanelRef.current === 'filters') {
+      setActiveSidebarPanel(null);
+    }
+  }, [setActiveSidebarPanel]);
+
+  const handleShowPreferences = useCallback(
+    (panel: GridSidebarPanel, anchorEl?: HTMLElement | null) => {
+      if (panel === 'columns') {
+        handleShowColumnsPanel(anchorEl);
+      } else if (panel === 'filters') {
+        handleShowFilterPanel(undefined, anchorEl);
+      } else {
+        setColumnsAnchor(null);
+        setFilterAnchor(null);
+        setChartsPanelOpen(false);
+        setActiveSidebarPanel('pivot');
+      }
+    },
+    [
+      handleShowColumnsPanel,
+      handleShowFilterPanel,
+      setActiveSidebarPanel,
+      setChartsPanelOpen,
+    ],
+  );
+
+  const handleHidePreferences = useCallback(() => {
+    setColumnsAnchor(null);
+    setFilterAnchor(null);
+    setActiveSidebarPanel(null);
+  }, [setActiveSidebarPanel]);
+
+  const handleFilterFromMenu = useCallback(
+    (field: string) => {
+      handleShowFilterPanel(field);
+    },
+    [handleShowFilterPanel],
   );
 
   // Compute total left/right pinned widths so keyboard navigation auto-scrolls clear of pinned columns
@@ -1898,6 +2045,23 @@ export function DataGridPro<R extends GridValidRowModel>(
     if (!eventBusMountedRef.current) return;
     eventBusRef.current.publish('columnVisibilityModelChange', columnVisibility);
   }, [colVisSig]);
+  useEffect(() => {
+    if (!eventBusMountedRef.current) return;
+    eventBusRef.current.publish('editHistoryChange', {
+      canUndo: editHistory.past.length > 0,
+      canRedo: editHistory.future.length > 0,
+      pastCount: editHistory.past.length,
+      futureCount: editHistory.future.length,
+    });
+  }, [editHistory.past.length, editHistory.future.length]);
+  useEffect(() => {
+    if (!eventBusMountedRef.current) return;
+    eventBusRef.current.publish('sidebarPanelChange', activeSidebarPanel);
+  }, [activeSidebarPanel]);
+  useEffect(() => {
+    if (!eventBusMountedRef.current) return;
+    eventBusRef.current.publish('chartsPanelOpenChange', chartsPanelOpen);
+  }, [chartsPanelOpen]);
 
   // Official MUI X imperative apiRef population
   useEffect(() => {
@@ -1960,6 +2124,7 @@ export function DataGridPro<R extends GridValidRowModel>(
 
       // Sorting, Filtering, Pagination, Grouping, Aggregation, Density
       setFilterModel,
+      setQuickFilterValues,
       setSortModel,
       getSortModel: () => sortModel,
       setPage: (page) => table.setPageIndex(Math.max(0, page)),
@@ -1968,6 +2133,53 @@ export function DataGridPro<R extends GridValidRowModel>(
       setDensity,
       setRowGroupingModel,
       setAggregationModel,
+
+      // Panels & Preferences (supports external button anchoring + headless sidebar fallback)
+      showFilterPanel: handleShowFilterPanel,
+      hideFilterPanel: handleHideFilterPanel,
+      showColumnsPanel: handleShowColumnsPanel,
+      hideColumnsPanel: handleHideColumnsPanel,
+      showPreferences: handleShowPreferences,
+      hidePreferences: handleHidePreferences,
+      setSidebarPanel: (panel) => {
+        if (panel) {
+          setColumnsAnchor(null);
+          setFilterAnchor(null);
+          setChartsPanelOpen(false);
+        }
+        setActiveSidebarPanel(panel);
+      },
+      setChartsPanelOpen: (open) => {
+        if (open) {
+          setActiveSidebarPanel(null);
+        }
+        setChartsPanelOpen(open);
+      },
+      toggleChartsPanel: () => {
+        setChartsPanelOpen((prev) => {
+          const next = !prev;
+          if (next) {
+            setActiveSidebarPanel(null);
+          }
+          return next;
+        });
+      },
+
+      // Export & Print
+      exportDataAsCsv: (options) => handleExportCsv(options),
+      exportDataAsExcel: (options) => handleExportXlsx(options),
+      exportDataAsJson: (options) => handleExportJson(options),
+      exportDataAsPrint: () => setPrintPreviewOpen(true),
+
+      // Edit History (Undo / Redo)
+      undo: handleUndo,
+      redo: handleRedo,
+      getEditHistoryState: () => ({
+        canUndo: editHistoryRef.current.past.length > 0,
+        canRedo: editHistoryRef.current.future.length > 0,
+        pastCount: editHistoryRef.current.past.length,
+        futureCount: editHistoryRef.current.future.length,
+      }),
 
       // Scrolling, Focus & Editing
       scrollToIndexes: ({ rowIndex, colIndex }) => {
@@ -2067,18 +2279,32 @@ export function DataGridPro<R extends GridValidRowModel>(
     exportState,
     focusCellAt,
     getVisibleDataColDefs,
+    handleExportCsv,
+    handleExportJson,
+    handleExportXlsx,
+    handleHideColumnsPanel,
+    handleHideFilterPanel,
+    handleHidePreferences,
+    handleRedo,
+    handleShowColumnsPanel,
+    handleShowFilterPanel,
+    handleShowPreferences,
+    handleUndo,
     hasDataSource,
     onRowsUpdate,
     pinColumn,
     restoreState,
     selectRow,
+    setActiveSidebarPanel,
     setAggregationModel,
+    setChartsPanelOpen,
     setColumnVisibilityField,
     setColumnVisibilityModel,
     setColumnWidth,
     setDensity,
     setFilterModel,
     setPaginationModel,
+    setQuickFilterValues,
     setRowGroupingModel,
     setRowSelectionModel,
     setSortModel,
@@ -2713,21 +2939,83 @@ export function DataGridPro<R extends GridValidRowModel>(
     >
       {DATA_GRID_STATIC_STYLES}
       {/* Slot: Toolbar */}
-      {!disableToolbar &&
+      {effectiveShowToolbar &&
         (() => {
+          const handleDeleteSelected = onDeleteSelectedRows
+            ? () => {
+                onDeleteSelectedRows(selectedIds);
+                clearSelection();
+              }
+            : undefined;
+          const handleUndoAction =
+            processRowUpdate && !pivotMode ? () => void handleUndo() : undefined;
+          const handleRedoAction =
+            processRowUpdate && !pivotMode ? () => void handleRedo() : undefined;
+          const handleTogglePivotPanel = () => {
+            if (activeSidebarPanel === 'pivot') {
+              setActiveSidebarPanel(null);
+            } else {
+              setActiveSidebarPanel('pivot');
+              setChartsPanelOpen(false);
+            }
+          };
+          const handleToggleChartsPanel = () => {
+            setChartsPanelOpen((prev) => {
+              const next = !prev;
+              if (next) setActiveSidebarPanel(null);
+              return next;
+            });
+          };
+          const handleToggleSidebar = () => {
+            if (activeSidebarPanel) {
+              setActiveSidebarPanel(null);
+            } else {
+              setActiveSidebarPanel(pivotMode ? 'pivot' : 'columns');
+              setChartsPanelOpen(false);
+            }
+          };
+
+          const toolbarRenderProps: GridToolbarRenderProps = {
+            density,
+            onDensityChange: setDensity,
+            quickFilterText: quickInput,
+            onQuickFilterChange: handleQuickFilterInput,
+            selectedCount: selectedIds.length,
+            selectedIds,
+            onClearSelection: clearSelection,
+            onDeleteSelected: handleDeleteSelected,
+            activeFilterCount,
+            hiddenColumnCount,
+            onOpenColumns: handleShowColumnsPanel,
+            onOpenFilters: (el) => handleShowFilterPanel(undefined, el),
+            onExportCsv: handleExportCsv,
+            onExportExcel: handleExportXlsx,
+            onExportXlsx: handleExportXlsx,
+            onExportJson: handleExportJson,
+            onPrint: () => setPrintPreviewOpen(true),
+            canUndo: editHistory.past.length > 0,
+            canRedo: editHistory.future.length > 0,
+            onUndo: handleUndoAction,
+            onRedo: handleRedoAction,
+            pivotMode,
+            pivotPanelOpen: activeSidebarPanel === 'pivot',
+            onTogglePivotPanel: handleTogglePivotPanel,
+            chartsIntegration,
+            chartsPanelOpen,
+            onToggleChartsPanel: handleToggleChartsPanel,
+            sidebarOpen: Boolean(activeSidebarPanel),
+            activeSidebarPanel,
+            onToggleSidebar: handleToggleSidebar,
+            onSidebarPanelChange: setActiveSidebarPanel,
+            disableColumnSelector,
+            disableColumnFilter,
+            disableDensitySelector,
+            localeText,
+          };
+
           const customToolbar = renderGridSlot(
             slots?.toolbar,
-            {
-              density,
-              onDensityChange: setDensity,
-              quickFilterText: quickInput,
-              onQuickFilterChange: handleQuickFilterInput,
-              selectedCount: selectedIds.length,
-              onClearSelection: clearSelection,
-              activeFilterCount,
-              hiddenColumnCount,
-              localeText,
-            },
+            toolbarRenderProps,
             slotProps?.toolbar,
           );
           if (customToolbar !== undefined) return customToolbar;
@@ -2735,8 +3023,8 @@ export function DataGridPro<R extends GridValidRowModel>(
             <GridToolbar
               columnsButtonRef={columnsButtonRef}
               filterButtonRef={filterButtonRef}
-              onOpenColumns={(el) => setColumnsAnchor(el)}
-              onOpenFilters={(el) => setFilterAnchor(el)}
+              onOpenColumns={(el) => handleShowColumnsPanel(el)}
+              onOpenFilters={(el) => handleShowFilterPanel(undefined, el)}
               hiddenColumnCount={hiddenColumnCount}
               activeFilterCount={activeFilterCount}
               density={density}
@@ -2745,60 +3033,25 @@ export function DataGridPro<R extends GridValidRowModel>(
               onQuickFilterChange={handleQuickFilterInput}
               showQuickFilter={slotProps?.toolbar?.showQuickFilter ?? true}
               quickFilterPlaceholder={slotProps?.toolbar?.quickFilterPlaceholder}
-              onExportCsv={handleExportCsv}
-              onExportXlsx={handleExportXlsx}
-              onExportJson={handleExportJson}
+              onExportCsv={(selectedOnly) => handleExportCsv(selectedOnly)}
+              onExportXlsx={(selectedOnly) => handleExportXlsx(selectedOnly)}
+              onExportJson={(selectedOnly) => handleExportJson(selectedOnly)}
               onPrint={() => setPrintPreviewOpen(true)}
               selectedCount={selectedIds.length}
               onClearSelection={clearSelection}
-              onDeleteSelected={
-                onDeleteSelectedRows
-                  ? () => {
-                      onDeleteSelectedRows(selectedIds);
-                      clearSelection();
-                    }
-                  : undefined
-              }
+              onDeleteSelected={handleDeleteSelected}
               canUndo={editHistory.past.length > 0}
               canRedo={editHistory.future.length > 0}
-              onUndo={
-                processRowUpdate && !pivotMode
-                  ? () => void handleUndo()
-                  : undefined
-              }
-              onRedo={
-                processRowUpdate && !pivotMode
-                  ? () => void handleRedo()
-                  : undefined
-              }
+              onUndo={handleUndoAction}
+              onRedo={handleRedoAction}
               pivotMode={pivotMode}
               pivotPanelOpen={activeSidebarPanel === 'pivot'}
-              onTogglePivotPanel={() => {
-                if (activeSidebarPanel === 'pivot') {
-                  setActiveSidebarPanel(null);
-                } else {
-                  setActiveSidebarPanel('pivot');
-                  setChartsPanelOpen(false);
-                }
-              }}
+              onTogglePivotPanel={handleTogglePivotPanel}
               chartsIntegration={chartsIntegration}
               chartsPanelOpen={chartsPanelOpen}
-              onToggleChartsPanel={() => {
-                setChartsPanelOpen((prev) => {
-                  const next = !prev;
-                  if (next) setActiveSidebarPanel(null);
-                  return next;
-                });
-              }}
+              onToggleChartsPanel={handleToggleChartsPanel}
               sidebarOpen={Boolean(activeSidebarPanel)}
-              onToggleSidebar={() => {
-                if (activeSidebarPanel) {
-                  setActiveSidebarPanel(null);
-                } else {
-                  setActiveSidebarPanel(pivotMode ? 'pivot' : 'columns');
-                  setChartsPanelOpen(false);
-                }
-              }}
+              onToggleSidebar={handleToggleSidebar}
               disableColumnSelector={disableColumnSelector}
               disableColumnFilter={disableColumnFilter}
               disableDensitySelector={disableDensitySelector}
@@ -4898,11 +5151,7 @@ export function DataGridPro<R extends GridValidRowModel>(
         onPinColumn={pinColumn}
         onHideColumn={hideColumn}
         onAutosizeColumn={autosizeColumn}
-        onOpenManageColumns={() => {
-          if (columnsButtonRef.current) {
-            setColumnsAnchor(columnsButtonRef.current);
-          }
-        }}
+        onOpenManageColumns={() => handleShowColumnsPanel()}
         aggregationFunction={
           activeMenuColumn ? aggregationModel[activeMenuColumn.id] : undefined
         }

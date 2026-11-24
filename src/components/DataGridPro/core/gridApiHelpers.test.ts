@@ -4,7 +4,11 @@ import React from 'react';
 import {
   applyRowUpdates,
   createGridEventBus,
+  normalizeExportOptions,
+  parseQuickFilterInput,
   renderGridSlot,
+  resolvePanelOpenTarget,
+  resolveToolbarVisibility,
 } from './gridApiHelpers';
 
 test('createGridEventBus subscribes, publishes payloads, unsubscribes, and isolates listener errors', () => {
@@ -91,4 +95,91 @@ test('renderGridSlot handles undefined, null, ReactNode elements, and React comp
   assert.ok(React.isValidElement(rendered));
   assert.equal((rendered as React.ReactElement<{ count?: number; label?: string }>).props.count, 64);
   assert.equal((rendered as React.ReactElement<{ count?: number; label?: string }>).props.label, 'Total');
+});
+
+test('resolveToolbarVisibility honors MUI X v8 showToolbar over legacy disableToolbar with backward-compatible default', () => {
+  assert.equal(resolveToolbarVisibility({}), true);
+  assert.equal(resolveToolbarVisibility({ disableToolbar: true }), false);
+  assert.equal(resolveToolbarVisibility({ disableToolbar: false }), true);
+  assert.equal(resolveToolbarVisibility({ showToolbar: false }), false);
+  assert.equal(resolveToolbarVisibility({ showToolbar: true }), true);
+  // Explicit showToolbar takes precedence over disableToolbar
+  assert.equal(
+    resolveToolbarVisibility({ showToolbar: true, disableToolbar: true }),
+    true,
+  );
+  assert.equal(
+    resolveToolbarVisibility({ showToolbar: false, disableToolbar: false }),
+    false,
+  );
+});
+
+test('resolvePanelOpenTarget anchors to external button, falls back to built-in toolbar button, then gracefully falls back to docked sidebar when toolbar is hidden', () => {
+  const externalBtn = { id: 'external-btn' } as unknown as HTMLElement;
+  const builtInBtn = { id: 'builtin-btn' } as unknown as HTMLElement;
+
+  assert.deepEqual(
+    resolvePanelOpenTarget({
+      panel: 'filters',
+      anchorEl: externalBtn,
+      toolbarButtonEl: builtInBtn,
+    }),
+    { mode: 'popover', anchorEl: externalBtn },
+  );
+
+  assert.deepEqual(
+    resolvePanelOpenTarget({
+      panel: 'columns',
+      anchorEl: null,
+      toolbarButtonEl: builtInBtn,
+    }),
+    { mode: 'popover', anchorEl: builtInBtn },
+  );
+
+  // When built-in toolbar is hidden (toolbarButtonEl is null) and no external anchorEl is supplied
+  assert.deepEqual(
+    resolvePanelOpenTarget({
+      panel: 'filters',
+      anchorEl: null,
+      toolbarButtonEl: null,
+    }),
+    { mode: 'sidebar', panel: 'filters' },
+  );
+
+  assert.deepEqual(
+    resolvePanelOpenTarget({
+      panel: 'columns',
+      anchorEl: undefined,
+      toolbarButtonEl: undefined,
+    }),
+    { mode: 'sidebar', panel: 'columns' },
+  );
+
+  // Pivot panel always docks to right sidebar
+  assert.deepEqual(
+    resolvePanelOpenTarget({
+      panel: 'pivot',
+      anchorEl: externalBtn,
+      toolbarButtonEl: builtInBtn,
+    }),
+    { mode: 'sidebar', panel: 'pivot' },
+  );
+});
+
+test('normalizeExportOptions and parseQuickFilterInput normalize legacy boolean and option objects cleanly', () => {
+  assert.deepEqual(normalizeExportOptions(undefined), {});
+  assert.deepEqual(normalizeExportOptions(true), { selectedOnly: true });
+  assert.deepEqual(normalizeExportOptions(false), { selectedOnly: false });
+  assert.deepEqual(
+    normalizeExportOptions({
+      selectedOnly: true,
+      fileName: 'q4-orders',
+      sheetName: 'Q4',
+    }),
+    { selectedOnly: true, fileName: 'q4-orders', sheetName: 'Q4' },
+  );
+
+  assert.deepEqual(parseQuickFilterInput(''), []);
+  assert.deepEqual(parseQuickFilterInput('   '), []);
+  assert.deepEqual(parseQuickFilterInput('  华东   SO-1001  '), ['华东', 'SO-1001']);
 });

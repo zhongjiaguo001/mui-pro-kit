@@ -5,7 +5,10 @@ import type {
   ReactNode,
   RefObject,
 } from 'react';
-import type { GridLocaleTextInput } from './core/localeText';
+import type {
+  GridLocaleText,
+  GridLocaleTextInput,
+} from './core/localeText';
 
 export type GridRowId = string | number;
 
@@ -129,7 +132,32 @@ export type GridEventName =
   | 'columnWidthChange'
   | 'cellModesModelChange'
   | 'rowModesModelChange'
+  | 'editHistoryChange'
+  | 'sidebarPanelChange'
+  | 'chartsPanelOpenChange'
   | (string & {});
+
+export const GridPreferencePanelsValue = {
+  filters: 'filters',
+  columns: 'columns',
+  pivot: 'pivot',
+} as const;
+
+export type GridPreferencePanelsValueType =
+  (typeof GridPreferencePanelsValue)[keyof typeof GridPreferencePanelsValue];
+
+export interface GridExportOptions {
+  selectedOnly?: boolean;
+  fileName?: string;
+  sheetName?: string;
+}
+
+export interface GridEditHistorySummary {
+  canUndo: boolean;
+  canRedo: boolean;
+  pastCount: number;
+  futureCount: number;
+}
 
 export interface GridApiPro<R extends GridValidRowModel = GridValidRowModel> {
   // State persistence
@@ -161,6 +189,7 @@ export interface GridApiPro<R extends GridValidRowModel = GridValidRowModel> {
 
   // Sorting, Filtering, Pagination, Grouping, Aggregation, Density
   setFilterModel: (model: GridFilterModel) => void;
+  setQuickFilterValues: (values: string[]) => void;
   setSortModel: (model: GridSortModel) => void;
   getSortModel: () => GridSortModel;
   setPage: (page: number) => void;
@@ -169,6 +198,34 @@ export interface GridApiPro<R extends GridValidRowModel = GridValidRowModel> {
   setDensity: (density: GridDensity) => void;
   setRowGroupingModel: (model: GridRowGroupingModel) => void;
   setAggregationModel: (model: GridAggregationModel) => void;
+
+  // Panels & Preferences (aligned with MUI X apiRef; optional anchorEl supports external triggers)
+  showFilterPanel: (
+    targetColumnField?: string,
+    anchorEl?: HTMLElement | null,
+  ) => void;
+  hideFilterPanel: () => void;
+  showColumnsPanel: (anchorEl?: HTMLElement | null) => void;
+  hideColumnsPanel: () => void;
+  showPreferences: (
+    panel: GridSidebarPanel,
+    anchorEl?: HTMLElement | null,
+  ) => void;
+  hidePreferences: () => void;
+  setSidebarPanel: (panel: GridSidebarPanel | null) => void;
+  setChartsPanelOpen: (open: boolean) => void;
+  toggleChartsPanel: () => void;
+
+  // Export & Print (aligned with MUI X apiRef)
+  exportDataAsCsv: (options?: GridExportOptions) => void;
+  exportDataAsExcel: (options?: GridExportOptions) => void;
+  exportDataAsJson: (options?: GridExportOptions) => void;
+  exportDataAsPrint: () => void;
+
+  // Edit History (Undo / Redo)
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  getEditHistoryState: () => GridEditHistorySummary;
 
   // Scrolling, Focus & Editing
   scrollToIndexes: (params: { rowIndex?: number; colIndex?: number }) => void;
@@ -649,6 +706,44 @@ export interface GridToolbarSlotProps {
   [key: string]: unknown;
 }
 
+export interface GridToolbarRenderProps extends GridToolbarSlotProps {
+  density: GridDensity;
+  onDensityChange: (density: GridDensity) => void;
+  quickFilterText: string;
+  onQuickFilterChange: (value: string) => void;
+  selectedCount: number;
+  selectedIds: GridRowId[];
+  onClearSelection: () => void;
+  onDeleteSelected?: () => void;
+  activeFilterCount: number;
+  hiddenColumnCount: number;
+  onOpenColumns: (anchorEl?: HTMLElement | null) => void;
+  onOpenFilters: (anchorEl?: HTMLElement | null) => void;
+  onExportCsv: (options?: boolean | GridExportOptions) => void;
+  onExportExcel: (options?: boolean | GridExportOptions) => void;
+  onExportXlsx: (options?: boolean | GridExportOptions) => void;
+  onExportJson: (options?: boolean | GridExportOptions) => void;
+  onPrint: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  pivotMode: boolean;
+  pivotPanelOpen: boolean;
+  onTogglePivotPanel: () => void;
+  chartsIntegration: boolean;
+  chartsPanelOpen: boolean;
+  onToggleChartsPanel: () => void;
+  sidebarOpen: boolean;
+  activeSidebarPanel: GridSidebarPanel | null;
+  onToggleSidebar: () => void;
+  onSidebarPanelChange: (panel: GridSidebarPanel | null) => void;
+  disableColumnSelector: boolean;
+  disableColumnFilter: boolean;
+  disableDensitySelector: boolean;
+  localeText: GridLocaleText;
+}
+
 export interface GridSlotProps {
   toolbar?: GridToolbarSlotProps;
   footer?: Record<string, unknown>;
@@ -761,6 +856,9 @@ export interface DataGridProProps<R extends GridValidRowModel = GridValidRowMode
   onSidebarPanelChange?: (panel: GridSidebarPanel | null) => void;
   defaultSidebarPanel?: GridSidebarPanel | null;
   chartsIntegration?: boolean;
+  chartsPanelOpen?: boolean;
+  onChartsPanelOpenChange?: (open: boolean) => void;
+  defaultChartsPanelOpen?: boolean;
   rowSpanning?: boolean;
   virtualizeThreshold?: number;
   onRowsScrollEnd?: (params: GridRowScrollEndParams) => void;
@@ -816,6 +914,12 @@ export interface DataGridProProps<R extends GridValidRowModel = GridValidRowMode
   hideFooterSelectedRowCount?: boolean;
   slots?: GridSlots;
   slotProps?: GridSlotProps;
+  /**
+   * MUI X v8-aligned prop to toggle the built-in top toolbar.
+   * When specified, takes precedence over `disableToolbar`.
+   * Defaults to `!disableToolbar` for backward compatibility.
+   */
+  showToolbar?: boolean;
   disableToolbar?: boolean;
   emptyStateAction?: {
     label: string;
