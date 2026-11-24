@@ -7,6 +7,11 @@ import {
   Drawer,
   FormControlLabel,
   IconButton,
+  InputAdornment,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Paper,
   Popover,
   Snackbar,
@@ -16,6 +21,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -33,6 +39,22 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import TuneIcon from '@mui/icons-material/Tune';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import RestoreIcon from '@mui/icons-material/Restore';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import TableRowsIcon from '@mui/icons-material/TableRows';
+import ViewHeadlineIcon from '@mui/icons-material/ViewHeadline';
+import ViewStreamIcon from '@mui/icons-material/ViewStream';
+import SaveAltIcon from '@mui/icons-material/SaveAlt';
+import TableViewOutlinedIcon from '@mui/icons-material/TableViewOutlined';
+import DataObjectIcon from '@mui/icons-material/DataObject';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import ViewSidebarOutlinedIcon from '@mui/icons-material/ViewSidebarOutlined';
+import CheckIcon from '@mui/icons-material/Check';
+import PivotTableChartIcon from '@mui/icons-material/PivotTableChart';
 import {
   DataGridPro,
   GRID_EN_US_LOCALE_TEXT,
@@ -42,12 +64,15 @@ import {
   executeServerQuery,
   executeServerTreeQuery,
   getOperatorsForColumnType,
+  parseQuickFilterInput,
   reorderRowsByIndex,
   useGridApiRef,
   type GridAggregationModel,
   type GridColDef,
   type GridColumnGroupingModel,
   type GridDataSource,
+  type GridDensity,
+  type GridEditHistorySummary,
   type GridFilterOperator,
   type GridListViewColDef,
   type GridPersistedState,
@@ -56,6 +81,7 @@ import {
   type GridRowGroupingModel,
   type GridRowId,
   type GridRowOrderChangeParams,
+  type GridSidebarPanel,
   type GridStateSnapshot,
 } from './components/DataGridPro';
 import {
@@ -246,6 +272,20 @@ export default function App() {
   const [lazyLoading, setLazyLoading] = useState(false);
   const lazyTimerRef = useRef<number | null>(null);
   const [showCellVerticalBorder, setShowCellVerticalBorder] = useState(false);
+  const [showBuiltInToolbar, setShowBuiltInToolbar] = useState(false);
+  const [externalQuickSearch, setExternalQuickSearch] = useState('');
+  const [sidebarPanel, setSidebarPanel] = useState<GridSidebarPanel | null>(null);
+  const [chartsPanelOpen, setChartsPanelOpen] = useState(false);
+  const [editHistoryState, setEditHistoryState] = useState<GridEditHistorySummary>({
+    canUndo: false,
+    canRedo: false,
+    pastCount: 0,
+    futureCount: 0,
+  });
+  const [externalDensityAnchor, setExternalDensityAnchor] =
+    useState<HTMLElement | null>(null);
+  const [externalExportAnchor, setExternalExportAnchor] =
+    useState<HTMLElement | null>(null);
   const [englishLocale, setEnglishLocale] = useState(false);
   const [customFooterSlot, setCustomFooterSlot] = useState(false);
   const [wideColumnsMode, setWideColumnsMode] = useState(false);
@@ -326,6 +366,21 @@ export default function App() {
       api.subscribeEvent('rowModesModelChange', (model) => {
         const count = model && typeof model === 'object' ? Object.keys(model).length : 0;
         record('rowModesModelChange', `editingRows=${count}`);
+      }),
+      api.subscribeEvent<GridEditHistorySummary>('editHistoryChange', (summary) => {
+        if (summary && typeof summary === 'object') {
+          setEditHistoryState(summary);
+          record(
+            'editHistoryChange',
+            `past=${summary.pastCount}, future=${summary.futureCount}`,
+          );
+        }
+      }),
+      api.subscribeEvent<GridSidebarPanel | null>('sidebarPanelChange', (panel) => {
+        record('sidebarPanelChange', panel ?? 'closed');
+      }),
+      api.subscribeEvent<boolean>('chartsPanelOpenChange', (open) => {
+        record('chartsPanelOpenChange', open ? 'open' : 'closed');
       }),
     ];
     return () => {
@@ -482,6 +537,16 @@ export default function App() {
 
   // Live state snapshot for StateInspector tab
   const [gridSnapshot, setGridSnapshot] = useState<GridStateSnapshot | null>(null);
+  const snapshotQuickFilterText = (
+    gridSnapshot?.filterModel.quickFilterValues ?? []
+  ).join(' ');
+  useEffect(() => {
+    setExternalQuickSearch((prev) =>
+      parseQuickFilterInput(prev).join(' ') === snapshotQuickFilterText
+        ? prev
+        : snapshotQuickFilterText,
+    );
+  }, [snapshotQuickFilterText]);
 
   // Inline edit feedback snackbar
   const [snackbar, setSnackbar] = useState<{
@@ -2392,6 +2457,25 @@ export default function App() {
                       control={
                         <Switch
                           size="small"
+                          checked={showBuiltInToolbar}
+                          onChange={(e) =>
+                            setShowBuiltInToolbar(e.target.checked)
+                          }
+                        />
+                      }
+                      label="显示内置工具栏 (showToolbar)"
+                    />
+                    <FormControlLabel
+                      sx={{
+                        m: 0,
+                        '& .MuiFormControlLabel-label': {
+                          fontSize: '0.8125rem',
+                          color: '#334155',
+                        },
+                      }}
+                      control={
+                        <Switch
+                          size="small"
                           checked={showCellVerticalBorder}
                           onChange={(e) =>
                             setShowCellVerticalBorder(e.target.checked)
@@ -2494,9 +2578,582 @@ export default function App() {
               </Box>
             </Box>
 
+            {/* Clean External Control Bar (shown when built-in toolbar is hidden via showToolbar={false}) */}
+            {!showBuiltInToolbar &&
+              (() => {
+                const selectedRowIds = gridSnapshot?.rowSelectionModel ?? [];
+                const activeFilterItemCount = (
+                  gridSnapshot?.filterModel.items ?? []
+                ).filter((item) => {
+                  if (
+                    item.operator === 'isEmpty' ||
+                    item.operator === 'isNotEmpty'
+                  ) {
+                    return true;
+                  }
+                  if (Array.isArray(item.value)) return item.value.length > 0;
+                  return (
+                    item.value !== undefined &&
+                    item.value !== null &&
+                    String(item.value).trim() !== ''
+                  );
+                }).length;
+                const hiddenColCount = Object.values(
+                  gridSnapshot?.columnVisibilityModel ?? {},
+                ).filter((v) => v === false).length;
+                const currentDensity: GridDensity =
+                  gridSnapshot?.density ?? 'standard';
+
+                const controlBtnSx = {
+                  height: 32,
+                  px: 1.25,
+                  minWidth: 'auto',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  color: '#334155',
+                  borderColor: '#E2E8F0',
+                  bgcolor: '#FFFFFF',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    borderColor: '#CBD5E1',
+                    bgcolor: '#F8FAFC',
+                    color: '#0F172A',
+                  },
+                };
+
+                if (selectedRowIds.length > 0) {
+                  return (
+                    <Box
+                      data-testid="external-selection-bar"
+                      sx={{
+                        minHeight: 44,
+                        px: 1.5,
+                        py: 0.75,
+                        borderRadius: '6px',
+                        bgcolor: '#EFF6FF',
+                        border: '1px solid #BFDBFE',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                      }}
+                    >
+                      <Typography
+                        className="tabular-nums"
+                        sx={{
+                          fontSize: '0.825rem',
+                          fontWeight: 600,
+                          color: '#1D4ED8',
+                        }}
+                      >
+                        {englishLocale
+                          ? `${selectedRowIds.length} row(s) selected`
+                          : `已选择 ${selectedRowIds.length} 笔订单`}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<TableViewOutlinedIcon sx={{ fontSize: 16 }} />}
+                          onClick={() =>
+                            apiRef.current?.exportDataAsExcel({
+                              selectedOnly: true,
+                              fileName: 'enterprise-orders-selected',
+                            })
+                          }
+                          sx={controlBtnSx}
+                        >
+                          {englishLocale ? 'Export Excel' : '导出选中 Excel'}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<SaveAltIcon sx={{ fontSize: 16 }} />}
+                          onClick={() =>
+                            apiRef.current?.exportDataAsCsv({
+                              selectedOnly: true,
+                              fileName: 'enterprise-orders-selected',
+                            })
+                          }
+                          sx={controlBtnSx}
+                        >
+                          {englishLocale ? 'Export CSV' : '导出选中 CSV'}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteOutlineIcon sx={{ fontSize: 16 }} />}
+                          onClick={() => {
+                            handleDeleteSelected(selectedRowIds);
+                            apiRef.current?.setRowSelectionModel([]);
+                          }}
+                          sx={{
+                            height: 32,
+                            px: 1.25,
+                            fontSize: '0.8rem',
+                            fontWeight: 500,
+                            bgcolor: '#FFFFFF',
+                          }}
+                        >
+                          {englishLocale ? 'Delete selected' : '删除选中'}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => apiRef.current?.setRowSelectionModel([])}
+                          sx={{
+                            height: 32,
+                            fontSize: '0.8rem',
+                            color: '#475569',
+                          }}
+                        >
+                          {englishLocale ? 'Clear' : '取消选择'}
+                        </Button>
+                      </Box>
+                    </Box>
+                  );
+                }
+
+                return (
+                  <Box
+                    data-testid="external-grid-toolbar"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 1.25,
+                    }}
+                  >
+                    {/* Left: Clean external quick filter input */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 260px', maxWidth: 360 }}>
+                      <TextField
+                        size="small"
+                        fullWidth
+                        value={externalQuickSearch}
+                        placeholder={
+                          englishLocale
+                            ? 'Search order, customer, region...'
+                            : '搜索订单号、客户、区域或负责人...'
+                        }
+                        onChange={(e) => {
+                          const nextVal = e.target.value;
+                          setExternalQuickSearch(nextVal);
+                          apiRef.current?.setQuickFilterValues(
+                            parseQuickFilterInput(nextVal),
+                          );
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            height: 32,
+                            fontSize: '0.8125rem',
+                            bgcolor: '#FFFFFF',
+                            borderRadius: '6px',
+                            '& fieldset': { borderColor: '#E2E8F0' },
+                            '&:hover fieldset': { borderColor: '#CBD5E1' },
+                            '&.Mui-focused fieldset': {
+                              borderColor: '#1976D2',
+                              borderWidth: 1,
+                            },
+                          },
+                        }}
+                        slotProps={{
+                          input: {
+                            'aria-label': englishLocale
+                              ? 'Search table'
+                              : '外部快速搜索',
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon sx={{ fontSize: 16, color: '#94A3B8' }} />
+                              </InputAdornment>
+                            ),
+                            endAdornment: externalQuickSearch ? (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  size="small"
+                                  aria-label={englishLocale ? 'Clear search' : '清空搜索'}
+                                  onClick={() => {
+                                    setExternalQuickSearch('');
+                                    apiRef.current?.setQuickFilterValues([]);
+                                  }}
+                                  edge="end"
+                                  sx={{ p: 0.25 }}
+                                >
+                                  <CloseIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </InputAdornment>
+                            ) : null,
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    {/* Right: Minimalist external controls powered by apiRef & controlled props */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<FilterListIcon sx={{ fontSize: 16 }} />}
+                        onClick={(e) =>
+                          apiRef.current?.showFilterPanel(undefined, e.currentTarget)
+                        }
+                        sx={{
+                          ...controlBtnSx,
+                          ...(activeFilterItemCount > 0
+                            ? {
+                                borderColor: '#93C5FD',
+                                bgcolor: '#EFF6FF',
+                                color: '#1D4ED8',
+                              }
+                            : {}),
+                        }}
+                      >
+                        {englishLocale ? 'Filters' : '筛选'}
+                        {activeFilterItemCount > 0 ? ` (${activeFilterItemCount})` : ''}
+                      </Button>
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ViewColumnIcon sx={{ fontSize: 16 }} />}
+                        onClick={(e) =>
+                          apiRef.current?.showColumnsPanel(e.currentTarget)
+                        }
+                        sx={{
+                          ...controlBtnSx,
+                          ...(hiddenColCount > 0
+                            ? {
+                                borderColor: '#93C5FD',
+                                bgcolor: '#EFF6FF',
+                                color: '#1D4ED8',
+                              }
+                            : {}),
+                        }}
+                      >
+                        {englishLocale ? 'Columns' : '列设置'}
+                        {hiddenColCount > 0 ? ` (${hiddenColCount})` : ''}
+                      </Button>
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={
+                          currentDensity === 'compact' ? (
+                            <ViewHeadlineIcon sx={{ fontSize: 16 }} />
+                          ) : currentDensity === 'comfortable' ? (
+                            <ViewStreamIcon sx={{ fontSize: 16 }} />
+                          ) : (
+                            <TableRowsIcon sx={{ fontSize: 16 }} />
+                          )
+                        }
+                        onClick={(e) => setExternalDensityAnchor(e.currentTarget)}
+                        sx={controlBtnSx}
+                      >
+                        {englishLocale ? 'Density' : '密度'}
+                      </Button>
+                      <Menu
+                        anchorEl={externalDensityAnchor}
+                        open={Boolean(externalDensityAnchor)}
+                        onClose={() => setExternalDensityAnchor(null)}
+                        slotProps={{
+                          paper: {
+                            elevation: 6,
+                            sx: { minWidth: 152, borderRadius: '6px', mt: 0.5 },
+                          },
+                        }}
+                      >
+                        {(
+                          [
+                            {
+                              value: 'compact',
+                              label: englishLocale ? 'Compact' : '紧凑',
+                              hint: '36px',
+                            },
+                            {
+                              value: 'standard',
+                              label: englishLocale ? 'Standard' : '标准',
+                              hint: '52px',
+                            },
+                            {
+                              value: 'comfortable',
+                              label: englishLocale ? 'Comfortable' : '宽松',
+                              hint: '67px',
+                            },
+                          ] as Array<{
+                            value: GridDensity;
+                            label: string;
+                            hint: string;
+                          }>
+                        ).map((opt) => (
+                          <MenuItem
+                            key={opt.value}
+                            selected={currentDensity === opt.value}
+                            onClick={() => {
+                              apiRef.current?.setDensity(opt.value);
+                              setExternalDensityAnchor(null);
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 26 }}>
+                              {currentDensity === opt.value ? (
+                                <CheckIcon fontSize="small" color="primary" />
+                              ) : null}
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={opt.label}
+                              secondary={opt.hint}
+                              slotProps={{
+                                primary: { sx: { fontSize: '0.84rem' } },
+                                secondary: {
+                                  sx: {
+                                    fontSize: '0.72rem',
+                                    fontFamily: 'JetBrains Mono, monospace',
+                                  },
+                                },
+                              }}
+                            />
+                          </MenuItem>
+                        ))}
+                      </Menu>
+
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<SaveAltIcon sx={{ fontSize: 16 }} />}
+                        onClick={(e) => setExternalExportAnchor(e.currentTarget)}
+                        sx={controlBtnSx}
+                      >
+                        {englishLocale ? 'Export' : '导出'}
+                      </Button>
+                      <Menu
+                        anchorEl={externalExportAnchor}
+                        open={Boolean(externalExportAnchor)}
+                        onClose={() => setExternalExportAnchor(null)}
+                        slotProps={{
+                          paper: {
+                            elevation: 6,
+                            sx: { minWidth: 176, borderRadius: '6px', mt: 0.5 },
+                          },
+                        }}
+                      >
+                        <MenuItem
+                          onClick={() => {
+                            apiRef.current?.exportDataAsExcel();
+                            setExternalExportAnchor(null);
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <TableViewOutlinedIcon
+                              fontSize="small"
+                              sx={{ color: '#15803D' }}
+                            />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={englishLocale ? 'Download Excel (.xlsx)' : '导出 Excel (.xlsx)'}
+                            slotProps={{ primary: { sx: { fontSize: '0.84rem' } } }}
+                          />
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => {
+                            apiRef.current?.exportDataAsCsv();
+                            setExternalExportAnchor(null);
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <SaveAltIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={englishLocale ? 'Download CSV' : '导出 CSV'}
+                            slotProps={{ primary: { sx: { fontSize: '0.84rem' } } }}
+                          />
+                        </MenuItem>
+                        <MenuItem
+                          onClick={() => {
+                            apiRef.current?.exportDataAsJson();
+                            setExternalExportAnchor(null);
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <DataObjectIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={englishLocale ? 'Download JSON' : '导出 JSON'}
+                            slotProps={{ primary: { sx: { fontSize: '0.84rem' } } }}
+                          />
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem
+                          onClick={() => {
+                            setExternalExportAnchor(null);
+                            apiRef.current?.exportDataAsPrint();
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 28 }}>
+                            <PrintOutlinedIcon fontSize="small" />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={englishLocale ? 'Print preview' : '打印预览'}
+                            slotProps={{ primary: { sx: { fontSize: '0.84rem' } } }}
+                          />
+                        </MenuItem>
+                      </Menu>
+
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ mx: 0.25, my: 0.5, borderColor: '#E2E8F0' }}
+                      />
+
+                      {!pivotMode && (
+                        <>
+                          <Tooltip
+                            title={englishLocale ? 'Undo (Ctrl+Z)' : '撤销编辑 (Ctrl+Z)'}
+                            enterDelay={350}
+                          >
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label={englishLocale ? 'Undo' : '撤销'}
+                                disabled={!editHistoryState.canUndo}
+                                onClick={() => void apiRef.current?.undo()}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  border: '1px solid #E2E8F0',
+                                  borderRadius: '6px',
+                                  bgcolor: '#FFFFFF',
+                                  color: editHistoryState.canUndo
+                                    ? '#334155'
+                                    : '#CBD5E1',
+                                }}
+                              >
+                                <UndoIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip
+                            title={englishLocale ? 'Redo (Ctrl+Y)' : '重做编辑 (Ctrl+Y)'}
+                            enterDelay={350}
+                          >
+                            <span>
+                              <IconButton
+                                size="small"
+                                aria-label={englishLocale ? 'Redo' : '重做'}
+                                disabled={!editHistoryState.canRedo}
+                                onClick={() => void apiRef.current?.redo()}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  border: '1px solid #E2E8F0',
+                                  borderRadius: '6px',
+                                  bgcolor: '#FFFFFF',
+                                  color: editHistoryState.canRedo
+                                    ? '#334155'
+                                    : '#CBD5E1',
+                                }}
+                              >
+                                <RedoIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </>
+                      )}
+
+                      <Tooltip
+                        title={englishLocale ? 'Charts panel' : '图表分析面板'}
+                        enterDelay={350}
+                      >
+                        <IconButton
+                          size="small"
+                          aria-label={englishLocale ? 'Toggle charts' : '图表分析'}
+                          aria-pressed={chartsPanelOpen}
+                          onClick={() => apiRef.current?.toggleChartsPanel()}
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            border: '1px solid',
+                            borderColor: chartsPanelOpen ? '#93C5FD' : '#E2E8F0',
+                            borderRadius: '6px',
+                            bgcolor: chartsPanelOpen ? '#EFF6FF' : '#FFFFFF',
+                            color: chartsPanelOpen ? '#1D4ED8' : '#334155',
+                          }}
+                        >
+                          <BarChartIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+
+                      {pivotMode && (
+                        <Tooltip
+                          title={englishLocale ? 'Pivot settings' : '透视维度面板'}
+                          enterDelay={350}
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label={englishLocale ? 'Pivot settings' : '透视配置'}
+                            aria-pressed={sidebarPanel === 'pivot'}
+                            onClick={() =>
+                              apiRef.current?.setSidebarPanel(
+                                sidebarPanel === 'pivot' ? null : 'pivot',
+                              )
+                            }
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              border: '1px solid',
+                              borderColor:
+                                sidebarPanel === 'pivot' ? '#93C5FD' : '#E2E8F0',
+                              borderRadius: '6px',
+                              bgcolor:
+                                sidebarPanel === 'pivot' ? '#EFF6FF' : '#FFFFFF',
+                              color:
+                                sidebarPanel === 'pivot' ? '#1D4ED8' : '#334155',
+                            }}
+                          >
+                            <PivotTableChartIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
+                      <Tooltip
+                        title={englishLocale ? 'Docked sidebar' : '右侧工具侧边栏'}
+                        enterDelay={350}
+                      >
+                        <IconButton
+                          size="small"
+                          aria-label={englishLocale ? 'Toggle sidebar' : '侧边栏'}
+                          aria-pressed={Boolean(sidebarPanel)}
+                          onClick={() =>
+                            apiRef.current?.setSidebarPanel(
+                              sidebarPanel ? null : pivotMode ? 'pivot' : 'columns',
+                            )
+                          }
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            border: '1px solid',
+                            borderColor: sidebarPanel ? '#93C5FD' : '#E2E8F0',
+                            borderRadius: '6px',
+                            bgcolor: sidebarPanel ? '#EFF6FF' : '#FFFFFF',
+                            color: sidebarPanel ? '#1D4ED8' : '#334155',
+                          }}
+                        >
+                          <ViewSidebarOutlinedIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
+                );
+              })()}
+
             {/* Primary Focal Anchor: DataGridPro */}
             <DataGridPro<EnterpriseOrder>
               apiRef={apiRef}
+              showToolbar={showBuiltInToolbar}
+              sidebarPanel={sidebarPanel}
+              onSidebarPanelChange={setSidebarPanel}
+              chartsPanelOpen={chartsPanelOpen}
+              onChartsPanelOpenChange={setChartsPanelOpen}
               rows={displayedRows}
               columns={columns}
               getRowId={getOrderRowId}

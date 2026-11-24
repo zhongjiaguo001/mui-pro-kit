@@ -198,6 +198,39 @@ export function StateInspector({
             </Button>
             <Button
               size="small"
+              variant="outlined"
+              onClick={() =>
+                runApiCommand('已执行 apiRef.setQuickFilterValues(["华东"])', (api) => {
+                  api.setQuickFilterValues(['华东']);
+                })
+              }
+            >
+              快搜「华东」(setQuickFilterValues)
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() =>
+                runApiCommand('已触发 apiRef.exportDataAsCsv()', (api) => {
+                  api.exportDataAsCsv({ fileName: 'orders-apiref-export' });
+                })
+              }
+            >
+              导出 CSV (exportDataAsCsv)
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() =>
+                runApiCommand('已触发 apiRef.exportDataAsExcel()', (api) => {
+                  api.exportDataAsExcel({ fileName: 'orders-apiref-export' });
+                })
+              }
+            >
+              导出 Excel (exportDataAsExcel)
+            </Button>
+            <Button
+              size="small"
               variant="text"
               color="inherit"
               onClick={() =>
@@ -207,6 +240,8 @@ export function StateInspector({
                   api.setRowSelectionModel([]);
                   api.setDensity('standard');
                   api.setPage(0);
+                  api.hidePreferences();
+                  api.setChartsPanelOpen(false);
                 })
               }
               sx={{ color: '#475569' }}
